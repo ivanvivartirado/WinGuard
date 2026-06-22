@@ -4,6 +4,7 @@ from app.cleaner import ALL_STEPS, STEPS, run_cleaning
 from app.defender import run_scan, is_defender_available
 from app.virustotal import scan_file, check_api_key
 from app.report import generate_report
+from app.lang import LANGUAGES
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -12,7 +13,9 @@ ctk.set_default_color_theme("blue")
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("WinGuard")
+        self.language = "Español"
+        self.t = LANGUAGES[self.language]
+        self.title(self.t["title"])
         self.geometry("750x600")
         self.resizable(False, False)
         self.log_lines = []
@@ -25,23 +28,44 @@ class App(ctk.CTk):
         header = ctk.CTkFrame(self, fg_color="#1a1a2e", corner_radius=0)
         header.pack(fill="x", pady=(0, 0))
         ctk.CTkLabel(
-            header, text="🛡 WinGuard",
+            header, text=f"🛡 {self.t['title']}",
             font=ctk.CTkFont(size=22, weight="bold"),
             text_color="#4fc3f7"
         ).pack(side="left", padx=20, pady=12)
         ctk.CTkLabel(
-            header, text="Limpieza y seguridad para Windows",
+            header, text=self.t["subtitle"],
             font=ctk.CTkFont(size=12),
             text_color="#888"
         ).pack(side="left", padx=0, pady=12)
+
+        self.language_menu = ctk.CTkOptionMenu(
+            header,
+            values=list(LANGUAGES.keys()),
+            command=self._change_language,
+            width=140,
+        )
+        self.language_menu.set(self.language)
+        self.language_menu.pack(side="right", padx=20, pady=12)
+
+    def _change_language(self, choice):
+        self.language = choice
+        self.t = LANGUAGES[choice]
+        self.title(self.t["title"])
+        self._rebuild_ui()
+
+    def _rebuild_ui(self):
+        for widget in self.winfo_children():
+            widget.destroy()
+        self._build_header()
+        self._build_tabs()
 
     def _build_tabs(self):
         self.tabs = ctk.CTkTabview(self)
         self.tabs.pack(fill="both", expand=True, padx=15, pady=15)
 
-        self.tabs.add("Limpieza rápida")
-        self.tabs.add("Modo avanzado")
-        self.tabs.add("VirusTotal")
+        self.tabs.add(self.t["tab_quick"])
+        self.tabs.add(self.t["tab_advanced"])
+        self.tabs.add(self.t["tab_vt"])
 
         self._build_quick_tab()
         self._build_advanced_tab()
@@ -49,13 +73,13 @@ class App(ctk.CTk):
 
     # ── PESTAÑA 1: Limpieza rápida ──────────────────────────────
     def _build_quick_tab(self):
-        tab = self.tabs.tab("Limpieza rápida")
+        tab = self.tabs.tab(self.t["tab_quick"])
 
         self.quick_progress = ctk.CTkProgressBar(tab, width=680)
         self.quick_progress.pack(pady=(15, 5))
         self.quick_progress.set(0)
 
-        self.quick_status = ctk.CTkLabel(tab, text="Listo para limpiar.", font=ctk.CTkFont(size=12))
+        self.quick_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
         self.quick_status.pack()
 
         self.quick_log = ctk.CTkTextbox(tab, width=680, height=300, state="disabled")
@@ -65,19 +89,19 @@ class App(ctk.CTk):
         btn_frame.pack()
 
         ctk.CTkButton(
-            btn_frame, text="Iniciar limpieza completa",
+            btn_frame, text=self.t["btn_quick_clean"],
             width=220, fg_color="#1565c0",
             command=self._run_quick_clean
         ).pack(side="left", padx=8)
 
         ctk.CTkButton(
-            btn_frame, text="Escanear con Defender",
+            btn_frame, text=self.t["btn_defender"],
             width=220, fg_color="#2e7d32",
             command=self._run_defender
         ).pack(side="left", padx=8)
 
         ctk.CTkButton(
-            btn_frame, text="Guardar informe",
+            btn_frame, text=self.t["btn_report"],
             width=180, fg_color="#555",
             command=self._save_report
         ).pack(side="left", padx=8)
@@ -94,7 +118,7 @@ class App(ctk.CTk):
 
     def _run_defender(self):
         if not is_defender_available():
-            self._log("Windows Defender no disponible en este sistema.")
+            self._log(self.t["defender_unavailable"])
             return
         thread = threading.Thread(
             target=run_scan,
@@ -105,10 +129,10 @@ class App(ctk.CTk):
 
     # ── PESTAÑA 2: Modo avanzado ────────────────────────────────
     def _build_advanced_tab(self):
-        tab = self.tabs.tab("Modo avanzado")
+        tab = self.tabs.tab(self.t["tab_advanced"])
 
         ctk.CTkLabel(
-            tab, text="Selecciona los pasos que quieres ejecutar:",
+            tab, text=self.t["select_steps"],
             font=ctk.CTkFont(size=13)
         ).pack(anchor="w", padx=20, pady=(15, 5))
 
@@ -126,7 +150,7 @@ class App(ctk.CTk):
         self.adv_log.pack(pady=5)
 
         ctk.CTkButton(
-            tab, text="Ejecutar selección",
+            tab, text=self.t["btn_run"],
             width=220, fg_color="#1565c0",
             command=self._run_advanced_clean
         ).pack(pady=8)
@@ -134,7 +158,7 @@ class App(ctk.CTk):
     def _run_advanced_clean(self):
         selected = [var.get() for var in self.step_vars]
         if not any(selected):
-            self._log_adv("Selecciona al menos un paso.")
+            self._log_adv(self.t["no_steps"])
             return
         thread = threading.Thread(
             target=run_cleaning,
@@ -145,26 +169,26 @@ class App(ctk.CTk):
 
     # ── PESTAÑA 3: VirusTotal ───────────────────────────────────
     def _build_vt_tab(self):
-        tab = self.tabs.tab("VirusTotal")
+        tab = self.tabs.tab(self.t["tab_vt"])
 
         ctk.CTkLabel(
-            tab, text="Analiza un archivo con 70+ motores antivirus",
+            tab, text=self.t["vt_title"],
             font=ctk.CTkFont(size=13)
         ).pack(pady=(20, 5))
 
         if not check_api_key():
             ctk.CTkLabel(
                 tab,
-                text="API key no configurada. Añade VT_API_KEY en el archivo .env",
+                text=self.t["vt_no_key"],
                 text_color="#e57373",
                 font=ctk.CTkFont(size=12)
             ).pack(pady=5)
 
-        self.vt_path_entry = ctk.CTkEntry(tab, width=500, placeholder_text="Ruta del archivo...")
+        self.vt_path_entry = ctk.CTkEntry(tab, width=500, placeholder_text=self.t["vt_placeholder"])
         self.vt_path_entry.pack(pady=8)
 
         ctk.CTkButton(
-            tab, text="Seleccionar archivo",
+            tab, text=self.t["btn_browse"],
             width=200, fg_color="#555",
             command=self._browse_file
         ).pack(pady=4)
@@ -177,7 +201,7 @@ class App(ctk.CTk):
         self.vt_log.pack(pady=5)
 
         ctk.CTkButton(
-            tab, text="Analizar archivo",
+            tab, text=self.t["btn_analyze"],
             width=220, fg_color="#1565c0",
             command=self._run_vt_scan
         ).pack(pady=8)
@@ -192,7 +216,7 @@ class App(ctk.CTk):
     def _run_vt_scan(self):
         filepath = self.vt_path_entry.get().strip()
         if not filepath:
-            self._log_vt("Selecciona un archivo primero.")
+            self._log_vt(self.t["vt_no_file"])
             return
         thread = threading.Thread(
             target=self._vt_thread,
@@ -243,4 +267,4 @@ class App(ctk.CTk):
 
     def _save_report(self):
         path = generate_report(self.log_lines, self.vt_result)
-        self._log(f"Informe guardado en: {path}")
+        self._log(f"{self.t['report_saved']} {path}")
