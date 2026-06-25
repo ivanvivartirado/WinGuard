@@ -17,12 +17,14 @@ class App(ctk.CTk):
         self.t = LANGUAGES[self.language]
         self.title(self.t["title"])
         self.geometry("750x600")
-        self.resizable(False, False)
+        self.minsize(750, 600)
+        self.resizable(True, True)
         self.log_lines = []
         self.vt_result = None
 
         self._build_header()
         self._build_tabs()
+        self._build_status_bar()
 
     def _build_header(self):
         header = ctk.CTkFrame(self, fg_color="#1a1a2e", corner_radius=0)
@@ -58,10 +60,12 @@ class App(ctk.CTk):
             widget.destroy()
         self._build_header()
         self._build_tabs()
+        self._build_status_bar()
 
     def _build_tabs(self):
         self.tabs = ctk.CTkTabview(self)
-        self.tabs.pack(fill="both", expand=True, padx=15, pady=15)
+        self.tabs.configure(fg_color="#111827")
+        self.tabs.pack(fill="both", expand=True, padx=15, pady=(15, 5))
 
         self.tabs.add(self.t["tab_quick"])
         self.tabs.add(self.t["tab_advanced"])
@@ -71,61 +75,114 @@ class App(ctk.CTk):
         self._build_advanced_tab()
         self._build_vt_tab()
 
+    def _build_status_bar(self):
+        footer = ctk.CTkFrame(self, fg_color="#1a1a2e", corner_radius=0)
+        footer.pack(fill="x", side="bottom")
+        self.status_bar = ctk.CTkLabel(
+            footer,
+            text=f"{self.t['status_ready']} | {self.language}",
+            font=ctk.CTkFont(size=11),
+            text_color="#cbd5e1"
+        )
+        self.status_bar.pack(side="left", padx=20, pady=10)
+
     # ── PESTAÑA 1: Limpieza rápida ──────────────────────────────
     def _build_quick_tab(self):
         tab = self.tabs.tab(self.t["tab_quick"])
 
-        self.quick_progress = ctk.CTkProgressBar(tab, width=680)
-        self.quick_progress.pack(pady=(15, 5))
+        self.quick_progress = ctk.CTkProgressBar(tab, width=700)
+        self.quick_progress.pack(pady=(15, 8))
         self.quick_progress.set(0)
 
-        self.quick_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
-        self.quick_status.pack()
+        ctk.CTkLabel(
+            tab,
+            text=self.t["quick_summary"],
+            font=ctk.CTkFont(size=12),
+            text_color="#cbd5e1"
+        ).pack(pady=(0, 12), padx=20, anchor="w")
 
-        self.quick_log = ctk.CTkTextbox(tab, width=680, height=300, state="disabled")
-        self.quick_log.pack(pady=10)
+        self.quick_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.quick_status.pack(pady=(0, 8))
+
+        ctk.CTkLabel(tab, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold"))
+        self.quick_log = ctk.CTkTextbox(tab, width=700, height=230, state="disabled")
+        self.quick_log.pack(pady=5)
 
         btn_frame = ctk.CTkFrame(tab, fg_color="transparent")
-        btn_frame.pack()
+        btn_frame.pack(pady=10)
 
-        ctk.CTkButton(
+        defender_available = is_defender_available()
+
+        self.quick_clean_button = ctk.CTkButton(
             btn_frame, text=self.t["btn_quick_clean"],
             width=220, fg_color="#1565c0",
+            hover_color="#1e88e5",
             command=self._run_quick_clean
-        ).pack(side="left", padx=8)
+        )
+        self.quick_clean_button.pack(side="left", padx=8)
 
-        ctk.CTkButton(
+        self.defender_button = ctk.CTkButton(
             btn_frame, text=self.t["btn_defender"],
             width=220, fg_color="#2e7d32",
-            command=self._run_defender
-        ).pack(side="left", padx=8)
+            hover_color="#388e3c",
+            command=self._run_defender,
+            state="normal" if defender_available else "disabled"
+        )
+        self.defender_button.pack(side="left", padx=8)
 
-        ctk.CTkButton(
+        self.report_button = ctk.CTkButton(
             btn_frame, text=self.t["btn_report"],
             width=180, fg_color="#555",
+            hover_color="#6c6c6c",
             command=self._save_report
-        ).pack(side="left", padx=8)
+        )
+        self.report_button.pack(side="left", padx=8)
+
+        self.clear_button = ctk.CTkButton(
+            btn_frame, text=self.t["btn_clear"],
+            width=120, fg_color="#8b5cf6",
+            hover_color="#a78bfa",
+            command=self._reset_log
+        )
+        self.clear_button.pack(side="left", padx=8)
+
+        self.quick_buttons = [
+            self.quick_clean_button,
+            self.defender_button,
+            self.report_button,
+            self.clear_button,
+        ]
 
     def _run_quick_clean(self):
         self._reset_log()
+        self._start_operation(self.quick_buttons, self.quick_status)
         selected = [True] * len(ALL_STEPS)
         thread = threading.Thread(
-            target=run_cleaning,
-            args=(selected, self._log, self._set_progress),
+            target=self._quick_clean_thread,
+            args=(selected,),
             daemon=True
         )
         thread.start()
+
+    def _quick_clean_thread(self, selected):
+        run_cleaning(selected, self._log, self._set_progress)
+        self._end_operation(self.quick_buttons, self.quick_status, True)
 
     def _run_defender(self):
         if not is_defender_available():
             self._log(self.t["defender_unavailable"])
             return
+        self._reset_log()
+        self._start_operation(self.quick_buttons, self.quick_status)
         thread = threading.Thread(
-            target=run_scan,
-            args=(self._log, self._set_progress),
+            target=self._defender_thread,
             daemon=True
         )
         thread.start()
+
+    def _defender_thread(self):
+        run_scan(self._log, self._set_progress)
+        self._end_operation(self.quick_buttons, self.quick_status, True)
 
     # ── PESTAÑA 2: Modo avanzado ────────────────────────────────
     def _build_advanced_tab(self):
@@ -136,36 +193,76 @@ class App(ctk.CTk):
             font=ctk.CTkFont(size=13)
         ).pack(anchor="w", padx=20, pady=(15, 5))
 
+        ctk.CTkLabel(
+            tab,
+            text=self.t["advanced_summary"],
+            font=ctk.CTkFont(size=12),
+            text_color="#cbd5e1"
+        ).pack(pady=(0, 12), padx=20, anchor="w")
+
+        control_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        control_frame.pack(fill="x", padx=20, pady=(0, 10))
+        self.select_all_button = ctk.CTkButton(
+            control_frame, text=self.t["btn_select_all"],
+            width=140, fg_color="#2563eb",
+            hover_color="#3b82f6", command=self._select_all_steps
+        )
+        self.select_all_button.pack(side="left")
+        self.clear_all_button = ctk.CTkButton(
+            control_frame, text=self.t["btn_clear_all"],
+            width=140, fg_color="#64748b",
+            hover_color="#94a3b8", command=self._clear_all_steps
+        )
+        self.clear_all_button.pack(side="left", padx=10)
+
         self.step_vars = []
         for step in STEPS:
             var = ctk.BooleanVar(value=True)
             self.step_vars.append(var)
             ctk.CTkCheckBox(tab, text=step, variable=var).pack(anchor="w", padx=30, pady=3)
 
-        self.adv_progress = ctk.CTkProgressBar(tab, width=680)
-        self.adv_progress.pack(pady=(15, 5))
+        self.adv_progress = ctk.CTkProgressBar(tab, width=700)
+        self.adv_progress.pack(pady=(15, 8))
         self.adv_progress.set(0)
 
-        self.adv_log = ctk.CTkTextbox(tab, width=680, height=180, state="disabled")
+        self.adv_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.adv_status.pack()
+
+        ctk.CTkLabel(tab, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold"))
+        self.adv_log = ctk.CTkTextbox(tab, width=700, height=180, state="disabled")
         self.adv_log.pack(pady=5)
 
-        ctk.CTkButton(
+        self.adv_run_button = ctk.CTkButton(
             tab, text=self.t["btn_run"],
             width=220, fg_color="#1565c0",
+            hover_color="#1e88e5",
             command=self._run_advanced_clean
-        ).pack(pady=8)
+        )
+        self.adv_run_button.pack(pady=8)
+        self.adv_buttons = [
+            self.adv_run_button,
+            self.select_all_button,
+            self.clear_all_button,
+        ]
 
     def _run_advanced_clean(self):
         selected = [var.get() for var in self.step_vars]
         if not any(selected):
             self._log_adv(self.t["no_steps"])
+            self._set_status(self.adv_status, self.t["status_error"])
             return
+        self._reset_adv_log()
+        self._start_operation(self.adv_buttons, self.adv_status)
         thread = threading.Thread(
-            target=run_cleaning,
-            args=(selected, self._log_adv, self._set_adv_progress),
+            target=self._advanced_thread,
+            args=(selected,),
             daemon=True
         )
         thread.start()
+
+    def _advanced_thread(self, selected):
+        run_cleaning(selected, self._log_adv, self._set_adv_progress)
+        self._end_operation(self.adv_buttons, self.adv_status, True)
 
     # ── PESTAÑA 3: VirusTotal ───────────────────────────────────
     def _build_vt_tab(self):
@@ -176,35 +273,54 @@ class App(ctk.CTk):
             font=ctk.CTkFont(size=13)
         ).pack(pady=(20, 5))
 
-        if not check_api_key():
+        ctk.CTkLabel(
+            tab,
+            text=self.t["vt_summary"],
+            font=ctk.CTkFont(size=12),
+            text_color="#cbd5e1"
+        ).pack(pady=(0, 12), padx=20, anchor="w")
+
+        has_key = check_api_key()
+        if not has_key:
             ctk.CTkLabel(
                 tab,
                 text=self.t["vt_no_key"],
-                text_color="#e57373",
+                text_color="#f87171",
                 font=ctk.CTkFont(size=12)
             ).pack(pady=5)
 
-        self.vt_path_entry = ctk.CTkEntry(tab, width=500, placeholder_text=self.t["vt_placeholder"])
-        self.vt_path_entry.pack(pady=8)
-
-        ctk.CTkButton(
-            tab, text=self.t["btn_browse"],
-            width=200, fg_color="#555",
+        path_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        path_frame.pack(pady=10)
+        self.vt_path_entry = ctk.CTkEntry(path_frame, width=460, placeholder_text=self.t["vt_placeholder"])
+        self.vt_path_entry.pack(side="left", padx=(0, 10))
+        self.vt_browse_button = ctk.CTkButton(
+            path_frame, text=self.t["btn_browse"],
+            width=160, fg_color="#555",
+            hover_color="#6c6c6c",
             command=self._browse_file
-        ).pack(pady=4)
+        )
+        self.vt_browse_button.pack(side="left")
 
-        self.vt_progress = ctk.CTkProgressBar(tab, width=680)
-        self.vt_progress.pack(pady=(15, 5))
+        self.vt_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.vt_status.pack(pady=(0, 8))
+
+        self.vt_progress = ctk.CTkProgressBar(tab, width=700)
+        self.vt_progress.pack(pady=(5, 8))
         self.vt_progress.set(0)
 
-        self.vt_log = ctk.CTkTextbox(tab, width=680, height=220, state="disabled")
+        ctk.CTkLabel(tab, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold"))
+        self.vt_log = ctk.CTkTextbox(tab, width=700, height=180, state="disabled")
         self.vt_log.pack(pady=5)
 
-        ctk.CTkButton(
+        self.vt_analyze_button = ctk.CTkButton(
             tab, text=self.t["btn_analyze"],
             width=220, fg_color="#1565c0",
-            command=self._run_vt_scan
-        ).pack(pady=8)
+            hover_color="#1e88e5",
+            command=self._run_vt_scan,
+            state="normal" if has_key else "disabled"
+        )
+        self.vt_analyze_button.pack(pady=8)
+        self.vt_buttons = [self.vt_browse_button, self.vt_analyze_button]
 
     def _browse_file(self):
         from tkinter import filedialog
@@ -217,37 +333,84 @@ class App(ctk.CTk):
         filepath = self.vt_path_entry.get().strip()
         if not filepath:
             self._log_vt(self.t["vt_no_file"])
+            self._set_status(self.vt_status, self.t["status_error"])
             return
+        from pathlib import Path
+        path = Path(filepath)
+        if not path.exists():
+            self._log_vt(self.t["vt_file_not_exists"])
+            self._set_status(self.vt_status, self.t["status_error"])
+            return
+        self._reset_vt_log()
+        self._start_operation(self.vt_buttons, self.vt_status)
         thread = threading.Thread(
             target=self._vt_thread,
-            args=(filepath,),
+            args=(str(path),),
             daemon=True
         )
         thread.start()
 
     def _vt_thread(self, filepath):
         self.vt_result = scan_file(filepath, self._log_vt, self._set_vt_progress)
+        self._end_operation(self.vt_buttons, self.vt_status, self.vt_result is not None)
+
+    def _toggle_buttons(self, buttons, enabled):
+        for button in buttons:
+            try:
+                button.configure(state="normal" if enabled else "disabled")
+            except Exception:
+                pass
+
+    def _start_operation(self, buttons, status_label):
+        self._safe_ui(lambda: self._toggle_buttons(buttons, False))
+        self._safe_ui(lambda: self._set_status(status_label, self.t["status_running"]))
+        self._safe_ui(lambda: self._set_status(self.status_bar, self.t["status_running"]))
+
+    def _end_operation(self, buttons, status_label, success=True):
+        def end():
+            self._toggle_buttons(buttons, True)
+            if hasattr(self, "defender_button") and not is_defender_available():
+                self.defender_button.configure(state="disabled")
+            if hasattr(self, "vt_analyze_button") and not check_api_key():
+                self.vt_analyze_button.configure(state="disabled")
+            text = self.t["status_complete"] if success else self.t["status_error"]
+            self._set_status(status_label, text)
+            self._set_status(self.status_bar, text)
+        self._safe_ui(end)
+
+    def _safe_ui(self, action):
+        try:
+            self.after(0, action)
+        except Exception:
+            pass
 
     # ── HELPERS ─────────────────────────────────────────────────
     def _log(self, msg):
-        self.log_lines.append(msg)
-        self.quick_log.configure(state="normal")
-        self.quick_log.insert("end", msg + "\n")
-        self.quick_log.see("end")
-        self.quick_log.configure(state="disabled")
-        self.quick_status.configure(text=msg)
+        def update():
+            self.log_lines.append(msg)
+            self.quick_log.configure(state="normal")
+            self.quick_log.insert("end", msg + "\n")
+            self.quick_log.see("end")
+            self.quick_log.configure(state="disabled")
+            self.quick_status.configure(text=msg)
+            self.status_bar.configure(text=msg)
+        self._safe_ui(update)
 
     def _log_adv(self, msg):
-        self.adv_log.configure(state="normal")
-        self.adv_log.insert("end", msg + "\n")
-        self.adv_log.see("end")
-        self.adv_log.configure(state="disabled")
+        def update():
+            self.adv_log.configure(state="normal")
+            self.adv_log.insert("end", msg + "\n")
+            self.adv_log.see("end")
+            self.adv_log.configure(state="disabled")
+        self._safe_ui(update)
 
     def _log_vt(self, msg):
-        self.vt_log.configure(state="normal")
-        self.vt_log.insert("end", msg + "\n")
-        self.vt_log.see("end")
-        self.vt_log.configure(state="disabled")
+        def update():
+            self.vt_log.configure(state="normal")
+            self.vt_log.insert("end", msg + "\n")
+            self.vt_log.see("end")
+            self.vt_log.configure(state="disabled")
+        self._safe_ui(update)
 
     def _set_progress(self, val):
         self.quick_progress.set(val)
@@ -258,12 +421,41 @@ class App(ctk.CTk):
     def _set_vt_progress(self, val):
         self.vt_progress.set(val)
 
+    def _set_status(self, label, text):
+        label.configure(text=text)
+
+    def _reset_adv_log(self):
+        self.adv_log.configure(state="normal")
+        self.adv_log.delete("1.0", "end")
+        self.adv_log.configure(state="disabled")
+        self.adv_progress.set(0)
+        self._set_status(self.adv_status, self.t["status_ready"])
+        self._set_status(self.status_bar, self.t["status_ready"])
+
+    def _reset_vt_log(self):
+        self.vt_log.configure(state="normal")
+        self.vt_log.delete("1.0", "end")
+        self.vt_log.configure(state="disabled")
+        self.vt_progress.set(0)
+        self._set_status(self.vt_status, self.t["status_ready"])
+        self._set_status(self.status_bar, self.t["status_ready"])
+
+    def _select_all_steps(self):
+        for var in self.step_vars:
+            var.set(True)
+
+    def _clear_all_steps(self):
+        for var in self.step_vars:
+            var.set(False)
+
     def _reset_log(self):
         self.log_lines = []
         self.quick_log.configure(state="normal")
         self.quick_log.delete("1.0", "end")
         self.quick_log.configure(state="disabled")
         self.quick_progress.set(0)
+        self._set_status(self.quick_status, self.t["status_ready"])
+        self._set_status(self.status_bar, f"{self.t['status_ready']} | {self.language}")
 
     def _save_report(self):
         path = generate_report(self.log_lines, self.vt_result)
