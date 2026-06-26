@@ -19,6 +19,7 @@ class App(ctk.CTk):
         self.geometry("750x600")
         self.minsize(750, 600)
         self.resizable(True, True)
+        self.configure(fg_color="#0b1220")
         self.log_lines = []
         self.vt_result = None
 
@@ -27,18 +28,18 @@ class App(ctk.CTk):
         self._build_status_bar()
 
     def _build_header(self):
-        header = ctk.CTkFrame(self, fg_color="#1a1a2e", corner_radius=0)
-        header.pack(fill="x", pady=(0, 0))
+        header = ctk.CTkFrame(self, fg_color="#111827", corner_radius=0)
+        header.pack(fill="x", padx=15, pady=(10, 5))
         ctk.CTkLabel(
             header, text=f"🛡 {self.t['title']}",
-            font=ctk.CTkFont(size=22, weight="bold"),
+            font=ctk.CTkFont(size=24, weight="bold"),
             text_color="#4fc3f7"
-        ).pack(side="left", padx=20, pady=12)
+        ).pack(side="left", padx=(20, 10), pady=16)
         ctk.CTkLabel(
             header, text=self.t["subtitle"],
-            font=ctk.CTkFont(size=12),
-            text_color="#888"
-        ).pack(side="left", padx=0, pady=12)
+            font=ctk.CTkFont(size=13),
+            text_color="#94a3b8"
+        ).pack(side="left", padx=0, pady=18)
 
         self.language_menu = ctk.CTkOptionMenu(
             header,
@@ -64,8 +65,8 @@ class App(ctk.CTk):
 
     def _build_tabs(self):
         self.tabs = ctk.CTkTabview(self)
-        self.tabs.configure(fg_color="#111827")
-        self.tabs.pack(fill="both", expand=True, padx=15, pady=(15, 5))
+        self.tabs.configure(fg_color="#0f172a")
+        self.tabs.pack(fill="both", expand=True, padx=15, pady=(0, 10))
 
         self.tabs.add(self.t["tab_quick"])
         self.tabs.add(self.t["tab_advanced"])
@@ -90,26 +91,31 @@ class App(ctk.CTk):
     def _build_quick_tab(self):
         tab = self.tabs.tab(self.t["tab_quick"])
 
-        self.quick_progress = ctk.CTkProgressBar(tab, width=700)
-        self.quick_progress.pack(pady=(15, 8))
+        card = ctk.CTkFrame(tab, fg_color="#111827", corner_radius=18, border_width=1, border_color="#334155")
+        card.pack(fill="both", expand=True, padx=20, pady=10)
+
+        self.quick_progress = ctk.CTkProgressBar(card)
+        self.quick_progress.pack(fill="x", padx=20, pady=(20, 12))
         self.quick_progress.set(0)
 
         ctk.CTkLabel(
-            tab,
+            card,
             text=self.t["quick_summary"],
             font=ctk.CTkFont(size=12),
             text_color="#cbd5e1"
-        ).pack(pady=(0, 12), padx=20, anchor="w")
+        ).pack(anchor="w", padx=20, pady=(0, 12))
 
-        self.quick_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
-        self.quick_status.pack(pady=(0, 8))
+        self.quick_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.quick_status.pack(anchor="w", padx=20, pady=(0, 14))
 
-        ctk.CTkLabel(tab, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold"))
-        self.quick_log = ctk.CTkTextbox(tab, width=700, height=230, state="disabled")
-        self.quick_log.pack(pady=5)
+        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        log_frame.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+        ctk.CTkLabel(log_frame, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", padx=14, pady=(14, 6))
+        self.quick_log = ctk.CTkTextbox(log_frame, width=700, height=220, state="disabled", fg_color="#0b1220", border_width=0)
+        self.quick_log.pack(fill="both", expand=True, padx=14, pady=(0, 14))
 
-        btn_frame = ctk.CTkFrame(tab, fg_color="transparent")
-        btn_frame.pack(pady=10)
+        btn_frame = ctk.CTkFrame(card, fg_color="transparent")
+        btn_frame.pack(padx=20, pady=(0, 20))
 
         defender_available = is_defender_available()
 
@@ -190,7 +196,7 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(
             tab, text=self.t["select_steps"],
-            font=ctk.CTkFont(size=13)
+            font=ctk.CTkFont(size=14, weight="bold")
         ).pack(anchor="w", padx=20, pady=(15, 5))
 
         ctk.CTkLabel(
@@ -200,8 +206,11 @@ class App(ctk.CTk):
             text_color="#cbd5e1"
         ).pack(pady=(0, 12), padx=20, anchor="w")
 
-        control_frame = ctk.CTkFrame(tab, fg_color="transparent")
-        control_frame.pack(fill="x", padx=20, pady=(0, 10))
+        card = ctk.CTkFrame(tab, fg_color="#111827", corner_radius=18, border_width=1, border_color="#334155")
+        card.pack(fill="both", expand=True, padx=20, pady=10)
+
+        control_frame = ctk.CTkFrame(card, fg_color="transparent")
+        control_frame.pack(fill="x", padx=20, pady=(20, 10))
         self.select_all_button = ctk.CTkButton(
             control_frame, text=self.t["btn_select_all"],
             width=140, fg_color="#2563eb",
@@ -215,30 +224,36 @@ class App(ctk.CTk):
         )
         self.clear_all_button.pack(side="left", padx=10)
 
+        steps_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        steps_frame.pack(fill="x", padx=20, pady=(0, 12))
         self.step_vars = []
         for step in STEPS:
             var = ctk.BooleanVar(value=True)
             self.step_vars.append(var)
-            ctk.CTkCheckBox(tab, text=step, variable=var).pack(anchor="w", padx=30, pady=3)
+            ctk.CTkCheckBox(steps_frame, text=step, variable=var).pack(anchor="w", padx=18, pady=4)
 
-        self.adv_progress = ctk.CTkProgressBar(tab, width=700)
-        self.adv_progress.pack(pady=(15, 8))
+        self.adv_progress = ctk.CTkProgressBar(card)
+        self.adv_progress.pack(fill="x", padx=20, pady=(10, 8))
         self.adv_progress.set(0)
 
-        self.adv_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
-        self.adv_status.pack()
+        self.adv_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.adv_status.pack(anchor="w", padx=20, pady=(0, 12))
 
-        ctk.CTkLabel(tab, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold"))
-        self.adv_log = ctk.CTkTextbox(tab, width=700, height=180, state="disabled")
-        self.adv_log.pack(pady=5)
+        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        log_frame.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+        ctk.CTkLabel(log_frame, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", padx=14, pady=(14, 6))
+        self.adv_log = ctk.CTkTextbox(log_frame, width=700, height=180, state="disabled", fg_color="#0b1220", border_width=0)
+        self.adv_log.pack(fill="both", expand=True, padx=14, pady=(0, 14))
 
+        action_frame = ctk.CTkFrame(card, fg_color="transparent")
+        action_frame.pack(fill="x", padx=20, pady=(0, 20))
         self.adv_run_button = ctk.CTkButton(
-            tab, text=self.t["btn_run"],
+            action_frame, text=self.t["btn_run"],
             width=220, fg_color="#1565c0",
             hover_color="#1e88e5",
             command=self._run_advanced_clean
         )
-        self.adv_run_button.pack(pady=8)
+        self.adv_run_button.pack(side="right")
         self.adv_buttons = [
             self.adv_run_button,
             self.select_all_button,
@@ -270,8 +285,8 @@ class App(ctk.CTk):
 
         ctk.CTkLabel(
             tab, text=self.t["vt_title"],
-            font=ctk.CTkFont(size=13)
-        ).pack(pady=(20, 5))
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(pady=(20, 5), anchor="w", padx=20)
 
         ctk.CTkLabel(
             tab,
@@ -280,19 +295,22 @@ class App(ctk.CTk):
             text_color="#cbd5e1"
         ).pack(pady=(0, 12), padx=20, anchor="w")
 
+        card = ctk.CTkFrame(tab, fg_color="#111827", corner_radius=18, border_width=1, border_color="#334155")
+        card.pack(fill="both", expand=True, padx=20, pady=10)
+
         has_key = check_api_key()
         if not has_key:
             ctk.CTkLabel(
-                tab,
+                card,
                 text=self.t["vt_no_key"],
                 text_color="#f87171",
                 font=ctk.CTkFont(size=12)
-            ).pack(pady=5)
+            ).pack(pady=(20, 5), padx=20, anchor="w")
 
-        path_frame = ctk.CTkFrame(tab, fg_color="transparent")
-        path_frame.pack(pady=10)
+        path_frame = ctk.CTkFrame(card, fg_color="transparent")
+        path_frame.pack(fill="x", padx=20, pady=(20, 10))
         self.vt_path_entry = ctk.CTkEntry(path_frame, width=460, placeholder_text=self.t["vt_placeholder"])
-        self.vt_path_entry.pack(side="left", padx=(0, 10))
+        self.vt_path_entry.pack(side="left", padx=(0, 10), fill="x", expand=True)
         self.vt_browse_button = ctk.CTkButton(
             path_frame, text=self.t["btn_browse"],
             width=160, fg_color="#555",
@@ -301,25 +319,29 @@ class App(ctk.CTk):
         )
         self.vt_browse_button.pack(side="left")
 
-        self.vt_status = ctk.CTkLabel(tab, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
-        self.vt_status.pack(pady=(0, 8))
+        self.vt_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.vt_status.pack(anchor="w", padx=20, pady=(0, 10))
 
-        self.vt_progress = ctk.CTkProgressBar(tab, width=700)
-        self.vt_progress.pack(pady=(5, 8))
+        self.vt_progress = ctk.CTkProgressBar(card)
+        self.vt_progress.pack(fill="x", padx=20, pady=(0, 10))
         self.vt_progress.set(0)
 
-        ctk.CTkLabel(tab, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold"))
-        self.vt_log = ctk.CTkTextbox(tab, width=700, height=180, state="disabled")
-        self.vt_log.pack(pady=5)
+        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        log_frame.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+        ctk.CTkLabel(log_frame, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", padx=14, pady=(14, 6))
+        self.vt_log = ctk.CTkTextbox(log_frame, width=700, height=180, state="disabled", fg_color="#0b1220", border_width=0)
+        self.vt_log.pack(fill="both", expand=True, padx=14, pady=(0, 14))
 
+        action_frame = ctk.CTkFrame(card, fg_color="transparent")
+        action_frame.pack(fill="x", padx=20, pady=(0, 20))
         self.vt_analyze_button = ctk.CTkButton(
-            tab, text=self.t["btn_analyze"],
+            action_frame, text=self.t["btn_analyze"],
             width=220, fg_color="#1565c0",
             hover_color="#1e88e5",
             command=self._run_vt_scan,
             state="normal" if has_key else "disabled"
         )
-        self.vt_analyze_button.pack(pady=8)
+        self.vt_analyze_button.pack(side="right")
         self.vt_buttons = [self.vt_browse_button, self.vt_analyze_button]
 
     def _browse_file(self):
