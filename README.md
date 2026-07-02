@@ -21,7 +21,7 @@ WinGuard es un antivirus para entornos Windows (De momento). Ofrece detección y
 1. Clona el repositorio:
 
    ```powershell
-   git clone https://github.com/tu-usuario/winguard.git
+   git clone https://github.com/ivanvivartirado/WinGuard
    ```
 
 2. Navega al directorio del proyecto:
