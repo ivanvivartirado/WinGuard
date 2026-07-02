@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+from app.lang import translate_message
+
 load_dotenv()
 
 API_KEY = os.getenv("VT_API_KEY")
@@ -13,17 +15,20 @@ def check_api_key():
     return API_KEY is not None and len(API_KEY) > 0
 
 
-def scan_file(filepath: str, log_callback, progress_callback):
+from app.lang import translate_message
+
+
+def scan_file(filepath: str, log_callback, progress_callback, lang=None):
     if not check_api_key():
-        log_callback("ERROR: No se encontró la API key de VirusTotal en el archivo .env")
+        log_callback(translate_message(lang, "vt_api_missing"))
         return None
 
     path = Path(filepath)
     if not path.exists():
-        log_callback(f"ERROR: El archivo {filepath} no existe.")
+        log_callback(translate_message(lang, "vt_file_missing", filepath=filepath))
         return None
 
-    log_callback(f"Subiendo archivo a VirusTotal: {path.name}")
+    log_callback(translate_message(lang, "vt_uploading", name=path.name))
     progress_callback(0.1)
 
     try:
@@ -36,11 +41,11 @@ def scan_file(filepath: str, log_callback, progress_callback):
             )
         response.raise_for_status()
         analysis_id = response.json()["data"]["id"]
-        log_callback(f"Archivo subido. ID de análisis: {analysis_id}")
+        log_callback(translate_message(lang, "vt_uploaded", analysis_id=analysis_id))
         progress_callback(0.3)
 
         # Esperar resultado
-        log_callback("Esperando resultados (puede tardar unos segundos)...")
+        log_callback(translate_message(lang, "vt_waiting"))
         import time
         for i in range(20):
             time.sleep(3)
@@ -55,28 +60,28 @@ def scan_file(filepath: str, log_callback, progress_callback):
 
             if status == "completed":
                 stats = data["stats"]
-                log_callback("--- Resultado VirusTotal ---")
-                log_callback(f"  Malicioso:   {stats.get('malicious', 0)}")
-                log_callback(f"  Sospechoso:  {stats.get('suspicious', 0)}")
-                log_callback(f"  Limpio:      {stats.get('undetected', 0)}")
-                log_callback(f"  Sin datos:   {stats.get('type-unsupported', 0)}")
+                log_callback(translate_message(lang, "vt_result_header"))
+                log_callback(translate_message(lang, "vt_malicious", count=stats.get('malicious', 0)))
+                log_callback(translate_message(lang, "vt_suspicious", count=stats.get('suspicious', 0)))
+                log_callback(translate_message(lang, "vt_clean", count=stats.get('undetected', 0)))
+                log_callback(translate_message(lang, "vt_unknown", count=stats.get('type-unsupported', 0)))
                 progress_callback(1.0)
 
                 if stats.get("malicious", 0) > 0:
-                    log_callback("ADVERTENCIA: El archivo es malicioso segun varios motores.")
+                    log_callback(translate_message(lang, "vt_warning_malicious"))
                 elif stats.get("suspicious", 0) > 0:
-                    log_callback("PRECAUCION: El archivo es sospechoso segun algunos motores.")
+                    log_callback(translate_message(lang, "vt_warning_suspicious"))
                 else:
-                    log_callback("El archivo parece limpio.")
+                    log_callback(translate_message(lang, "vt_clean_result"))
 
                 return stats
 
-        log_callback("Tiempo de espera agotado. Intentalo de nuevo mas tarde.")
+        log_callback(translate_message(lang, "vt_timeout"))
         return None
 
     except requests.exceptions.HTTPError as e:
-        log_callback(f"Error HTTP: {e}")
+        log_callback(translate_message(lang, "vt_http_error", error=e))
         return None
     except Exception as e:
-        log_callback(f"Error inesperado: {e}")
+        log_callback(translate_message(lang, "vt_unexpected_error", error=e))
         return None

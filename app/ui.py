@@ -1,6 +1,6 @@
 import customtkinter as ctk
 import threading
-from app.cleaner import ALL_STEPS, STEPS, run_cleaning
+from app.cleaner import ALL_STEPS, run_cleaning
 from app.defender import run_scan, is_defender_available
 from app.virustotal import scan_file, check_api_key
 from app.report import generate_report
@@ -16,10 +16,10 @@ class App(ctk.CTk):
         self.language = "Español"
         self.t = LANGUAGES[self.language]
         self.title(self.t["title"])
-        self.geometry("750x600")
-        self.minsize(750, 600)
+        self.geometry("820x670")
+        self.minsize(780, 640)
         self.resizable(True, True)
-        self.configure(fg_color="#0b1220")
+        self.configure(fg_color="#07111f")
         self.log_lines = []
         self.vt_result = None
 
@@ -28,27 +28,41 @@ class App(ctk.CTk):
         self._build_status_bar()
 
     def _build_header(self):
-        header = ctk.CTkFrame(self, fg_color="#111827", corner_radius=0)
-        header.pack(fill="x", padx=15, pady=(10, 5))
+        header = ctk.CTkFrame(self, fg_color="#111827", corner_radius=20, border_width=1, border_color="#334155")
+        header.pack(fill="x", padx=15, pady=(10, 8))
+        header.grid_columnconfigure(1, weight=1)
+
         ctk.CTkLabel(
             header, text=f"🛡 {self.t['title']}",
             font=ctk.CTkFont(size=24, weight="bold"),
             text_color="#4fc3f7"
-        ).pack(side="left", padx=(20, 10), pady=16)
+        ).grid(row=0, column=0, padx=(20, 10), pady=16, sticky="w")
+
+        title_wrap = ctk.CTkFrame(header, fg_color="transparent")
+        title_wrap.grid(row=0, column=1, padx=0, pady=12, sticky="w")
         ctk.CTkLabel(
-            header, text=self.t["subtitle"],
+            title_wrap, text=self.t["subtitle"],
             font=ctk.CTkFont(size=13),
             text_color="#94a3b8"
-        ).pack(side="left", padx=0, pady=18)
+        ).pack(anchor="w")
+        ctk.CTkLabel(
+            title_wrap, text=self.t["header_badge"],
+            font=ctk.CTkFont(size=11),
+            text_color="#38bdf8"
+        ).pack(anchor="w", pady=(2, 0))
 
         self.language_menu = ctk.CTkOptionMenu(
             header,
             values=list(LANGUAGES.keys()),
             command=self._change_language,
             width=140,
+            fg_color="#0f172a",
+            button_color="#1f2937",
+            text_color="#f8fafc",
+            dropdown_fg_color="#111827",
         )
         self.language_menu.set(self.language)
-        self.language_menu.pack(side="right", padx=20, pady=12)
+        self.language_menu.grid(row=0, column=2, padx=20, pady=16, sticky="e")
 
     def _change_language(self, choice):
         self.language = choice
@@ -64,8 +78,8 @@ class App(ctk.CTk):
         self._build_status_bar()
 
     def _build_tabs(self):
-        self.tabs = ctk.CTkTabview(self)
-        self.tabs.configure(fg_color="#0f172a")
+        self.tabs = ctk.CTkTabview(self, width=760, height=560)
+        self.tabs.configure(fg_color="#0f172a", border_width=0, corner_radius=22)
         self.tabs.pack(fill="both", expand=True, padx=15, pady=(0, 10))
 
         self.tabs.add(self.t["tab_quick"])
@@ -77,8 +91,8 @@ class App(ctk.CTk):
         self._build_vt_tab()
 
     def _build_status_bar(self):
-        footer = ctk.CTkFrame(self, fg_color="#1a1a2e", corner_radius=0)
-        footer.pack(fill="x", side="bottom")
+        footer = ctk.CTkFrame(self, fg_color="#111827", corner_radius=18, border_width=1, border_color="#334155")
+        footer.pack(fill="x", side="bottom", padx=15, pady=(0, 15))
         self.status_bar = ctk.CTkLabel(
             footer,
             text=f"{self.t['status_ready']} | {self.language}",
@@ -94,60 +108,69 @@ class App(ctk.CTk):
         card = ctk.CTkFrame(tab, fg_color="#111827", corner_radius=18, border_width=1, border_color="#334155")
         card.pack(fill="both", expand=True, padx=20, pady=10)
 
-        self.quick_progress = ctk.CTkProgressBar(card)
-        self.quick_progress.pack(fill="x", padx=20, pady=(20, 12))
+        self.quick_progress = ctk.CTkProgressBar(card, height=10)
+        self.quick_progress.pack(fill="x", padx=20, pady=(20, 8))
         self.quick_progress.set(0)
 
+        info_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=16, border_width=1, border_color="#334155")
+        info_frame.pack(fill="x", padx=20, pady=(0, 14))
         ctk.CTkLabel(
-            card,
+            info_frame,
             text=self.t["quick_summary"],
             font=ctk.CTkFont(size=12),
             text_color="#cbd5e1"
-        ).pack(anchor="w", padx=20, pady=(0, 12))
+        ).pack(anchor="w", padx=16, pady=14)
 
-        self.quick_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.quick_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12), text_color="#cbd5e1")
         self.quick_status.pack(anchor="w", padx=20, pady=(0, 14))
 
-        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=16, border_width=1, border_color="#334155")
         log_frame.pack(fill="both", expand=True, padx=20, pady=(0, 12))
         ctk.CTkLabel(log_frame, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", padx=14, pady=(14, 6))
         self.quick_log = ctk.CTkTextbox(log_frame, width=700, height=220, state="disabled", fg_color="#0b1220", border_width=0)
         self.quick_log.pack(fill="both", expand=True, padx=14, pady=(0, 14))
 
-        btn_frame = ctk.CTkFrame(card, fg_color="transparent")
-        btn_frame.pack(padx=20, pady=(0, 20))
+        btn_panel = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=16, border_width=1, border_color="#334155")
+        btn_panel.pack(fill="x", padx=18, pady=(0, 20))
+
+        btn_frame = ctk.CTkFrame(btn_panel, fg_color="transparent")
+        btn_frame.pack(padx=12, pady=12)
 
         defender_available = is_defender_available()
 
         self.quick_clean_button = ctk.CTkButton(
-            btn_frame, text=self.t["btn_quick_clean"],
-            width=220, fg_color="#1565c0",
-            hover_color="#1e88e5",
+            btn_frame, text=f"🧹 {self.t['btn_quick_clean']}",
+            width=220, height=44,
+            fg_color="#2563eb", hover_color="#1d4ed8",
+            text_color="#f8fafc", corner_radius=16,
             command=self._run_quick_clean
         )
         self.quick_clean_button.pack(side="left", padx=8)
 
         self.defender_button = ctk.CTkButton(
-            btn_frame, text=self.t["btn_defender"],
-            width=220, fg_color="#2e7d32",
-            hover_color="#388e3c",
+            btn_frame, text=f"🛡 {self.t['btn_defender']}",
+            width=220, height=44,
+            fg_color="#16a34a", hover_color="#15803d",
+            text_color="#f8fafc", corner_radius=16,
             command=self._run_defender,
             state="normal" if defender_available else "disabled"
         )
         self.defender_button.pack(side="left", padx=8)
 
         self.report_button = ctk.CTkButton(
-            btn_frame, text=self.t["btn_report"],
-            width=180, fg_color="#555",
-            hover_color="#6c6c6c",
+            btn_frame, text=f"📄 {self.t['btn_report']}",
+            width=180, height=44,
+            fg_color="#334155", hover_color="#475569",
+            text_color="#f8fafc", corner_radius=16,
             command=self._save_report
         )
         self.report_button.pack(side="left", padx=8)
 
         self.clear_button = ctk.CTkButton(
-            btn_frame, text=self.t["btn_clear"],
-            width=120, fg_color="#8b5cf6",
-            hover_color="#a78bfa",
+            btn_frame, text=f"🧼 {self.t['btn_clear']}",
+            width=120, height=44,
+            fg_color="#7c3aed", hover_color="#9333ea",
+            text_color="#f8fafc", corner_radius=16,
             command=self._reset_log
         )
         self.clear_button.pack(side="left", padx=8)
@@ -171,7 +194,7 @@ class App(ctk.CTk):
         thread.start()
 
     def _quick_clean_thread(self, selected):
-        run_cleaning(selected, self._log, self._set_progress)
+        run_cleaning(selected, self._log, self._set_progress, lang=self.t)
         self._end_operation(self.quick_buttons, self.quick_status, True)
 
     def _run_defender(self):
@@ -187,7 +210,7 @@ class App(ctk.CTk):
         thread.start()
 
     def _defender_thread(self):
-        run_scan(self._log, self._set_progress)
+        run_scan(self._log, self._set_progress, lang=self.t)
         self._end_operation(self.quick_buttons, self.quick_status, True)
 
     # ── PESTAÑA 2: Modo avanzado ────────────────────────────────
@@ -212,34 +235,41 @@ class App(ctk.CTk):
         control_frame = ctk.CTkFrame(card, fg_color="transparent")
         control_frame.pack(fill="x", padx=20, pady=(20, 10))
         self.select_all_button = ctk.CTkButton(
-            control_frame, text=self.t["btn_select_all"],
-            width=140, fg_color="#2563eb",
-            hover_color="#3b82f6", command=self._select_all_steps
+            control_frame, text=f"✅ {self.t['btn_select_all']}",
+            width=160, height=42, fg_color="#2563eb",
+            hover_color="#1d4ed8", text_color="#f8fafc",
+            corner_radius=16, command=self._select_all_steps
         )
         self.select_all_button.pack(side="left")
         self.clear_all_button = ctk.CTkButton(
-            control_frame, text=self.t["btn_clear_all"],
-            width=140, fg_color="#64748b",
-            hover_color="#94a3b8", command=self._clear_all_steps
+            control_frame, text=f"❌ {self.t['btn_clear_all']}",
+            width=160, height=42, fg_color="#475569",
+            hover_color="#64748b", text_color="#f8fafc",
+            corner_radius=16, command=self._clear_all_steps
         )
         self.clear_all_button.pack(side="left", padx=10)
 
-        steps_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        steps_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=16, border_width=1, border_color="#334155")
         steps_frame.pack(fill="x", padx=20, pady=(0, 12))
+        steps_frame.grid_columnconfigure(0, weight=1)
+        steps_frame.grid_columnconfigure(1, weight=1)
         self.step_vars = []
-        for step in STEPS:
+        steps = self.t["step_names"]
+        for index, step in enumerate(steps):
             var = ctk.BooleanVar(value=True)
             self.step_vars.append(var)
-            ctk.CTkCheckBox(steps_frame, text=step, variable=var).pack(anchor="w", padx=18, pady=4)
+            row = index // 2
+            column = index % 2
+            ctk.CTkCheckBox(steps_frame, text=step, variable=var).grid(row=row, column=column, sticky="w", padx=(18 if column == 0 else 12, 18), pady=6)
 
-        self.adv_progress = ctk.CTkProgressBar(card)
+        self.adv_progress = ctk.CTkProgressBar(card, height=10)
         self.adv_progress.pack(fill="x", padx=20, pady=(10, 8))
         self.adv_progress.set(0)
 
-        self.adv_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.adv_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12), text_color="#cbd5e1")
         self.adv_status.pack(anchor="w", padx=20, pady=(0, 12))
 
-        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14, border_width=1, border_color="#334155")
         log_frame.pack(fill="both", expand=True, padx=20, pady=(0, 12))
         ctk.CTkLabel(log_frame, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", padx=14, pady=(14, 6))
         self.adv_log = ctk.CTkTextbox(log_frame, width=700, height=180, state="disabled", fg_color="#0b1220", border_width=0)
@@ -248,10 +278,10 @@ class App(ctk.CTk):
         action_frame = ctk.CTkFrame(card, fg_color="transparent")
         action_frame.pack(fill="x", padx=20, pady=(0, 20))
         self.adv_run_button = ctk.CTkButton(
-            action_frame, text=self.t["btn_run"],
-            width=220, fg_color="#1565c0",
-            hover_color="#1e88e5",
-            command=self._run_advanced_clean
+            action_frame, text=f"▶️ {self.t['btn_run']}",
+            width=220, height=44, fg_color="#2563eb",
+            hover_color="#1d4ed8", text_color="#f8fafc",
+            corner_radius=16, command=self._run_advanced_clean
         )
         self.adv_run_button.pack(side="right")
         self.adv_buttons = [
@@ -276,7 +306,7 @@ class App(ctk.CTk):
         thread.start()
 
     def _advanced_thread(self, selected):
-        run_cleaning(selected, self._log_adv, self._set_adv_progress)
+        run_cleaning(selected, self._log_adv, self._set_adv_progress, lang=self.t)
         self._end_operation(self.adv_buttons, self.adv_status, True)
 
     # ── PESTAÑA 3: VirusTotal ───────────────────────────────────
@@ -307,41 +337,42 @@ class App(ctk.CTk):
                 font=ctk.CTkFont(size=12)
             ).pack(pady=(20, 5), padx=20, anchor="w")
 
-        path_frame = ctk.CTkFrame(card, fg_color="transparent")
+        path_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=16, border_width=1, border_color="#334155")
         path_frame.pack(fill="x", padx=20, pady=(20, 10))
-        self.vt_path_entry = ctk.CTkEntry(path_frame, width=460, placeholder_text=self.t["vt_placeholder"])
+        self.vt_path_entry = ctk.CTkEntry(path_frame, width=460, placeholder_text=self.t["vt_placeholder"], corner_radius=14, fg_color="#0b1220")
         self.vt_path_entry.pack(side="left", padx=(0, 10), fill="x", expand=True)
         self.vt_browse_button = ctk.CTkButton(
-            path_frame, text=self.t["btn_browse"],
-            width=160, fg_color="#555",
-            hover_color="#6c6c6c",
-            command=self._browse_file
+            path_frame, text=f"📁 {self.t['btn_browse']}",
+            width=160, height=42, fg_color="#475569",
+            hover_color="#64748b", text_color="#f8fafc",
+            corner_radius=16, command=self._browse_file
         )
         self.vt_browse_button.pack(side="left")
 
-        self.vt_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12))
+        self.vt_status = ctk.CTkLabel(card, text=self.t["status_ready"], font=ctk.CTkFont(size=12), text_color="#cbd5e1")
         self.vt_status.pack(anchor="w", padx=20, pady=(0, 10))
 
-        self.vt_progress = ctk.CTkProgressBar(card)
+        self.vt_progress = ctk.CTkProgressBar(card, height=10)
         self.vt_progress.pack(fill="x", padx=20, pady=(0, 10))
         self.vt_progress.set(0)
 
-        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14)
+        log_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=14, border_width=1, border_color="#334155")
         log_frame.pack(fill="both", expand=True, padx=20, pady=(0, 10))
         ctk.CTkLabel(log_frame, text=self.t["log_header"], font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w", padx=14, pady=(14, 6))
         self.vt_log = ctk.CTkTextbox(log_frame, width=700, height=180, state="disabled", fg_color="#0b1220", border_width=0)
         self.vt_log.pack(fill="both", expand=True, padx=14, pady=(0, 14))
 
-        action_frame = ctk.CTkFrame(card, fg_color="transparent")
+        action_frame = ctk.CTkFrame(card, fg_color="#0f172a", corner_radius=16, border_width=1, border_color="#334155")
         action_frame.pack(fill="x", padx=20, pady=(0, 20))
+        action_frame.pack_propagate(False)
         self.vt_analyze_button = ctk.CTkButton(
-            action_frame, text=self.t["btn_analyze"],
-            width=220, fg_color="#1565c0",
-            hover_color="#1e88e5",
-            command=self._run_vt_scan,
+            action_frame, text=f"🔎 {self.t['btn_analyze']}",
+            width=220, height=44, fg_color="#2563eb",
+            hover_color="#1d4ed8", text_color="#f8fafc",
+            corner_radius=16, command=self._run_vt_scan,
             state="normal" if has_key else "disabled"
         )
-        self.vt_analyze_button.pack(side="right")
+        self.vt_analyze_button.pack(side="right", padx=10, pady=10)
         self.vt_buttons = [self.vt_browse_button, self.vt_analyze_button]
 
     def _browse_file(self):
@@ -373,7 +404,7 @@ class App(ctk.CTk):
         thread.start()
 
     def _vt_thread(self, filepath):
-        self.vt_result = scan_file(filepath, self._log_vt, self._set_vt_progress)
+        self.vt_result = scan_file(filepath, self._log_vt, self._set_vt_progress, lang=self.t)
         self._end_operation(self.vt_buttons, self.vt_status, self.vt_result is not None)
 
     def _toggle_buttons(self, buttons, enabled):
@@ -480,5 +511,5 @@ class App(ctk.CTk):
         self._set_status(self.status_bar, f"{self.t['status_ready']} | {self.language}")
 
     def _save_report(self):
-        path = generate_report(self.log_lines, self.vt_result)
+        path = generate_report(self.log_lines, self.vt_result, lang=self.t)
         self._log(f"{self.t['report_saved']} {path}")

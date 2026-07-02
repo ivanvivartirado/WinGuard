@@ -4,17 +4,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from app.lang import translate_message
 
-STEPS = [
-    "Temporales de usuario",
-    "Temporales del sistema",
-    "Prefetch",
-    "Cache DNS y miniaturas",
-    "Programas de inicio innecesarios",
-    "Memoria virtual",
-    "Papelera de reciclaje",
-    "Limpieza de disco",
-]
 
 STARTUP_KEYS = [
     "Spotify", "Discord", "OneDrive",
@@ -23,7 +14,7 @@ STARTUP_KEYS = [
 ]
 
 
-def clean_user_temp(log):
+def clean_user_temp(log, lang=None):
     removed = 0
     for folder in [tempfile.gettempdir(), os.environ.get("TEMP", ""), os.environ.get("TMP", "")]:
         if not folder:
@@ -37,10 +28,10 @@ def clean_user_temp(log):
                 removed += 1
             except Exception:
                 pass
-    log(f"Temporales de usuario: {removed} elementos eliminados.")
+    log(translate_message(lang, "clean_user_temp", count=removed))
 
 
-def clean_system_temp(log):
+def clean_system_temp(log, lang=None):
     removed = 0
     system_temp = Path("C:/Windows/Temp")
     if system_temp.exists():
@@ -53,10 +44,10 @@ def clean_system_temp(log):
                 removed += 1
             except Exception:
                 pass
-    log(f"Temporales del sistema: {removed} elementos eliminados.")
+    log(translate_message(lang, "clean_system_temp", count=removed))
 
 
-def clean_prefetch(log):
+def clean_prefetch(log, lang=None):
     removed = 0
     prefetch = Path("C:/Windows/Prefetch")
     if prefetch.exists():
@@ -66,10 +57,10 @@ def clean_prefetch(log):
                 removed += 1
             except Exception:
                 pass
-    log(f"Prefetch: {removed} archivos eliminados.")
+    log(translate_message(lang, "clean_prefetch", count=removed))
 
 
-def clean_dns_and_thumbnails(log):
+def clean_dns_and_thumbnails(log, lang=None):
     subprocess.run(["ipconfig", "/flushdns"], capture_output=True)
     removed = 0
     thumb_dir = Path(os.environ.get("LocalAppData", "")) / "Microsoft/Windows/Explorer"
@@ -80,10 +71,10 @@ def clean_dns_and_thumbnails(log):
                 removed += 1
             except Exception:
                 pass
-    log(f"Cache DNS vaciada. Miniaturas: {removed} archivos eliminados.")
+    log(translate_message(lang, "clean_dns_and_thumbnails", count=removed))
 
 
-def clean_startup(log):
+def clean_startup(log, lang=None):
     disabled = []
     for key in STARTUP_KEYS:
         result = subprocess.run(
@@ -95,32 +86,32 @@ def clean_startup(log):
         if result.returncode == 0:
             disabled.append(key)
     if disabled:
-        log(f"Inicio deshabilitado: {', '.join(disabled)}.")
+        log(translate_message(lang, "clean_startup_disabled", items=", ".join(disabled)))
     else:
-        log("Inicio: ningún programa innecesario encontrado.")
+        log(translate_message(lang, "clean_startup_none"))
 
 
-def clean_virtual_memory(log):
+def clean_virtual_memory(log, lang=None):
     subprocess.run(
         ["reg", "add",
          r"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management",
          "/v", "ClearPageFileAtShutdown", "/t", "REG_DWORD", "/d", "1", "/f"],
         capture_output=True
     )
-    log("Memoria virtual: se limpiará en cada apagado.")
+    log(translate_message(lang, "clean_virtual_memory"))
 
 
-def clean_recycle_bin(log):
+def clean_recycle_bin(log, lang=None):
     subprocess.run(
         ["PowerShell", "-Command", "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"],
         capture_output=True
     )
-    log("Papelera de reciclaje vaciada.")
+    log(translate_message(lang, "clean_recycle_bin"))
 
 
-def clean_disk(log):
+def clean_disk(log, lang=None):
     subprocess.run(["cleanmgr", "/sagerun:1"], capture_output=True)
-    log("Limpieza de disco completada.")
+    log(translate_message(lang, "clean_disk"))
 
 
 ALL_STEPS = [
@@ -135,14 +126,14 @@ ALL_STEPS = [
 ]
 
 
-def run_cleaning(selected_steps: list[bool], log_callback, progress_callback):
+def run_cleaning(selected_steps: list[bool], log_callback, progress_callback, lang=None):
     total = sum(selected_steps)
     done = 0
     for i, (run, func) in enumerate(zip(selected_steps, ALL_STEPS)):
         if run:
             try:
-                func(log_callback)
+                func(log_callback, lang=lang)
             except Exception as e:
-                log_callback(f"Error en paso {i+1}: {e}")
+                log_callback(translate_message(lang, "clean_error_step", index=i + 1, error=e))
             done += 1
-            progress_callback(done / total)
+            progress_callback(done / total if total else 0.0)
