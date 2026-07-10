@@ -8,8 +8,41 @@ from app.lang import translate_message
 load_dotenv()
 
 API_KEY = os.getenv("VT_API_KEY")
-BASE_URL = "https://www.virustotal.com/api/v3"
-
+BASE_URL = "https://www.virustotal.com/api/v3"~/Pruebas/WinGuard main
+❯ python main.py
+Traceback (most recent call last):
+  File "/home/xibi/Pruebas/WinGuard/main.py", line 4, in <module>
+    app = App()
+  File "/home/xibi/Pruebas/WinGuard/app/ui.py", line 27, in __init__
+    self._build_tabs()
+    ~~~~~~~~~~~~~~~~^^
+  File "/home/xibi/Pruebas/WinGuard/app/ui.py", line 82, in _build_tabs
+    self.tabs.configure(fg_color="#0f172a", border_width=0, corner_radius=22)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xibi/.local/lib/python3.14/site-packages/customtkinter/windows/widgets/ctk_tabview.py", line 252, in configure
+    self._set_grid_current_tab()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/xibi/.local/lib/python3.14/site-packages/customtkinter/windows/widgets/ctk_tabview.py", line 186, in _set_grid_current_tab
+    self._tab_dict[self._current_name].grid(row=3, column=0, sticky="nsew",
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+KeyError: ''~/Pruebas/WinGuard main
+❯ python main.py
+Traceback (most recent call last):
+  File "/home/xibi/Pruebas/WinGuard/main.py", line 4, in <module>
+    app = App()
+  File "/home/xibi/Pruebas/WinGuard/app/ui.py", line 27, in __init__
+    self._build_tabs()
+    ~~~~~~~~~~~~~~~~^^
+  File "/home/xibi/Pruebas/WinGuard/app/ui.py", line 82, in _build_tabs
+    self.tabs.configure(fg_color="#0f172a", border_width=0, corner_radius=22)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/xibi/.local/lib/python3.14/site-packages/customtkinter/windows/widgets/ctk_tabview.py", line 252, in configure
+    self._set_grid_current_tab()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/xibi/.local/lib/python3.14/site-packages/customtkinter/windows/widgets/ctk_tabview.py", line 186, in _set_grid_current_tab
+    self._tab_dict[self._current_name].grid(row=3, column=0, sticky="nsew",
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+KeyError: ''
 
 def check_api_key():
     return API_KEY is not None and len(API_KEY) > 0

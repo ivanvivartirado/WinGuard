@@ -78,13 +78,20 @@ class App(ctk.CTk):
         self._build_status_bar()
 
     def _build_tabs(self):
-        self.tabs = ctk.CTkTabview(self, width=760, height=560)
-        self.tabs.configure(fg_color="#0f172a", border_width=0, corner_radius=22)
+        self.tabs = ctk.CTkTabview(
+            self,
+            width=760,
+            height=560,
+            fg_color="#0f172a",
+            border_width=0,
+            corner_radius=22,
+        )
         self.tabs.pack(fill="both", expand=True, padx=15, pady=(0, 10))
 
         self.tabs.add(self.t["tab_quick"])
         self.tabs.add(self.t["tab_advanced"])
         self.tabs.add(self.t["tab_vt"])
+        self.tabs.set(self.t["tab_quick"])
 
         self._build_quick_tab()
         self._build_advanced_tab()
